@@ -1,10 +1,3 @@
-//
-//  SpendTrackerTests.swift
-//  SpendTrackerTests
-//
-//  Created by MacBook Pro on 01/03/2025.
-//
-
 import XCTest
 @testable import SpendTracker
 

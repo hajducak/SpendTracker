@@ -1,10 +1,3 @@
-//
-//  SpendTrackerUITestsLaunchTests.swift
-//  SpendTrackerUITests
-//
-//  Created by MacBook Pro on 01/03/2025.
-//
-
 import XCTest
 
 final class SpendTrackerUITestsLaunchTests: XCTestCase {

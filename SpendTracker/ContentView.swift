@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  SpendTracker
-//
-//  Created by MacBook Pro on 01/03/2025.
-//
-
 import SwiftUI
 
 struct ContentView: View {

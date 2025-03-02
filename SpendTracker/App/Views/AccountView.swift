@@ -10,9 +10,10 @@ struct AccountView: View {
     var body: some View {
         NavigationView {
             VStack {
-                if let token = viewModel.token {
-                    Text("Token: \(token)")
-                        .font(.subheadline)
+                if let accounts = viewModel.accounts {
+                    List(accounts, id: \.resourceId) { account in
+                        Text(account.iban)
+                    }
                 } else if let errorMessage = viewModel.errorMessage {
                     Text("Error: \(errorMessage)")
                         .foregroundColor(.red)

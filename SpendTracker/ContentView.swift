@@ -1,17 +1,23 @@
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+    @StateObject private var accountViewModel: AccountViewModel
+    
+    init(accountViewModel: AccountViewModel) {
+        _accountViewModel = StateObject(wrappedValue: accountViewModel)
     }
-}
-
-#Preview {
-    ContentView()
+    
+    var body: some View {
+        TabView {
+            AccountView(viewModel: accountViewModel)
+                .tabItem {
+                    Label("Account", systemImage: "person.circle.fill")
+                }
+            
+            Text("Other Tab Content")
+                .tabItem {
+                    Label("Other", systemImage: "star.circle.fill")
+                }
+        }
+    }
 }

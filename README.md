@@ -1,5 +1,10 @@
 # SpendTracker  
 A simple iOS application for displaying transparent bank accounts using the ČSAS API.  
+<div style="display: flex; justify-content: center; gap: 10px;">
+    <img src="SpendTracker/Assets.xcassets/Screenshots/screenshot1.imageset/screenshot1.png" width="200">
+    <img src="SpendTracker/Assets.xcassets/Screenshots/screenshot2.imageset/screenshot2.png" width="200">
+    <img src="SpendTracker/Assets.xcassets/Screenshots/screenshot3.imageset/screenshot3.png" width="200">
+</div>
 
 ## Technologies Used  
 - Swift  

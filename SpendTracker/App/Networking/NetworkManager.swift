@@ -3,9 +3,13 @@ import Combine
 
 protocol NetworkManagerProtocol {
     func loadWallet() -> AnyPublisher<WalletResponse, Error>
+    func loadToken(walletId: String, walletSecret: String) -> AnyPublisher<TokenResponse, Error>
 }
 
 class NetworkManagerImpl: NetworkManagerProtocol {
+    
+    private static let clientId: String = "3cff42fb-c037-4317-8a36-b31c09395c80"
+    private static let clientSecret: String = "dc50f4eb-7e43-43e5-9e90-65065e8f6931"
     
     func loadWallet() -> AnyPublisher<WalletResponse, Error> {
         // Načítame certifikát
@@ -20,8 +24,8 @@ class NetworkManagerImpl: NetworkManagerProtocol {
 
         // Telo požiadavky
         let body = [
-            "clientId": "3cff42fb-c037-4317-8a36-b31c09395c80",
-            "clientSecret": "dc50f4eb-7e43-43e5-9e90-65065e8f6931"
+            "clientId": Self.clientId,
+            "clientSecret": Self.clientSecret
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
@@ -39,4 +43,38 @@ class NetworkManagerImpl: NetworkManagerProtocol {
             .decode(type: WalletResponse.self, decoder: JSONDecoder())
             .eraseToAnyPublisher()
     }
+
+    func loadToken(walletId: String, walletSecret: String) -> AnyPublisher<TokenResponse, Error> {
+            // Načítame certifikát pre získanie tokenu
+            guard let identity = CertificateManagement.shared.loadP12Certificate(fileName: "sandbox", password: "Heslo1234") else {
+                return Fail(error: NSError(domain: "NetworkManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load certificate"])).eraseToAnyPublisher()
+            }
+            
+            let url = URL(string: "https://webapi.developers.erstegroup.com/api/egb/sandbox/v1/sandbox-idp/wallets/\(walletId)/tokens")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            // Telo požiadavky pre získanie tokenu
+            let body = [
+                "clientId": Self.clientId,
+                "clientSecret": Self.clientSecret,
+                "walletSecret": walletSecret
+            ]
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            
+            let delegate = SSLSessionDelegate(identity: identity)
+            let sessionConfig = URLSessionConfiguration.default
+            let session = URLSession(configuration: sessionConfig, delegate: delegate, delegateQueue: nil)
+            
+            return session.dataTaskPublisher(for: request)
+                .tryMap { result -> Data in
+                    guard let response = result.response as? HTTPURLResponse, response.statusCode == 200 else {
+                        throw NSError(domain: "NetworkManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+                    }
+                    return result.data
+                }
+                .decode(type: TokenResponse.self, decoder: JSONDecoder())
+                .eraseToAnyPublisher()
+        }
 }

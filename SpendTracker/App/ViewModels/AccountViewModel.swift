@@ -2,8 +2,7 @@ import Foundation
 import Combine
 
 class AccountViewModel: ObservableObject {
-    @Published var walletId: String?
-    @Published var walletSecret: String?
+    @Published var token: String?
     @Published var errorMessage: String?
     
     private let networkManager: NetworkManagerProtocol
@@ -11,25 +10,32 @@ class AccountViewModel: ObservableObject {
     
     init(networkManager: NetworkManagerProtocol) {
         self.networkManager = networkManager
-        loadWallet()
+        loadData()
     }
     
-    func loadWallet() {
+    func loadData() {
         networkManager.loadWallet()
+            .flatMap({ walletResponse -> AnyPublisher<TokenResponse, Error> in
+                print("walletId: \(walletResponse.walletId)")
+                print("walletSecret: \(walletResponse.walletSecret)")
+                return self.networkManager.loadToken(
+                    walletId: walletResponse.walletId,
+                    walletSecret: walletResponse.walletSecret)
+            })
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { completion in
                 switch completion {
                 case .finished:
-                    print("Wallet request finished.")
+                    print("Token request finished.")
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                     print("Error: \(error)")
                 }
-            }, receiveValue: { walletResponse in
-                self.walletId = walletResponse.walletId
-                self.walletSecret = walletResponse.walletSecret
-                print("walletId: \(walletResponse.walletId)")
-                print("walletSecret: \(walletResponse.walletSecret)")
+            }, receiveValue: { tokenResponse in
+                self.token = tokenResponse.accessToken
+                print("token: \(tokenResponse.accessToken)")
+                print("tokenType: \(tokenResponse.tokenType)")
+                print("expiresIn: \(tokenResponse.expiresIn)")
             }).store(in: &cancellables)
     }
 }

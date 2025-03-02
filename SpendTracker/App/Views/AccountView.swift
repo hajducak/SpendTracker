@@ -10,10 +10,8 @@ struct AccountView: View {
     var body: some View {
         NavigationView {
             VStack {
-                if let walletId = viewModel.walletId, let walletSecret = viewModel.walletSecret {
-                    Text("Wallet ID: \(walletId)")
-                        .font(.subheadline)
-                    Text("Wallet Secret: \(walletSecret)")
+                if let token = viewModel.token {
+                    Text("Token: \(token)")
                         .font(.subheadline)
                 } else if let errorMessage = viewModel.errorMessage {
                     Text("Error: \(errorMessage)")

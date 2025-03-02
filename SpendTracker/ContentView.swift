@@ -9,7 +9,7 @@ struct ContentView: View {
     
     var body: some View {
         TabView {
-            AccountView(viewModel: accountsViewModel)
+            AccountsView(viewModel: accountsViewModel)
                 .tabItem {
                     Label("Account", systemImage: "person.circle.fill")
                 }

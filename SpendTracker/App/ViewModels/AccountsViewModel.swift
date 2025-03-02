@@ -1,9 +1,15 @@
 import Foundation
 import Combine
 
-class AccountsViewModel: ObservableObject {
-    @Published var accounts: [AccountViewModel]?
-    @Published var errorMessage: String?
+enum AccountsContentState {
+    case empty
+    case error(String)
+    case loading
+    case content([AccountsContentData])
+}
+
+final class AccountsViewModel: ObservableObject {
+    @Published var state: AccountsContentState = .loading
     
     let networkManager: NetworkManagerProtocol
     private var cancellables: Set<AnyCancellable> = []
@@ -14,11 +20,32 @@ class AccountsViewModel: ObservableObject {
         loadAccounts()
     }
 
-    func loadToken() -> AnyPublisher<TokenResponse, Error> {
+    func refreshData() {
+        loadAccounts()
+    }
+
+    private func loadAccounts() {
+        loadToken()
+            .flatMap({ tokenResponse -> AnyPublisher<AccountsResponse, Error> in
+                self.token = tokenResponse.accessToken
+                return self.networkManager.getAccounts(token: tokenResponse.accessToken)
+            })
+            .receive(on: DispatchQueue.main)
+            .sink(receiveCompletion: {[weak self] completion in
+                if case .failure(let error) = completion {
+                    self?.state = .error(error.localizedDescription)
+                }
+            },  receiveValue: { accountsResponse in
+                let accounts = accountsResponse.accounts.compactMap({
+                    AccountsContentData(resourceId: $0.resourceId, iban: $0.iban)
+                })
+                self.state = accounts.isEmpty ? .empty : .content(accounts)
+            }).store(in: &cancellables)
+    }
+    
+    private func loadToken() -> AnyPublisher<TokenResponse, Error> {
         return networkManager.loadWallet()
             .flatMap({ walletResponse -> AnyPublisher<TokenResponse, Error> in
-                print("walletId: \(walletResponse.walletId)")
-                print("walletSecret: \(walletResponse.walletSecret)")
                 return self.networkManager.loadToken(
                     walletId: walletResponse.walletId,
                     walletSecret: walletResponse.walletSecret
@@ -26,8 +53,8 @@ class AccountsViewModel: ObservableObject {
             })
             .eraseToAnyPublisher()
     }
-
-    // If login required
+    
+    // TODO: If login required
     // Only if we do not have this (just once)
     func addBankAccount(token: TokenResponse) {
         let idpCode = "CSAS"
@@ -36,46 +63,16 @@ class AccountsViewModel: ObservableObject {
             idpCode: idpCode
         )
         .receive(on: DispatchQueue.main)
-        .sink(receiveCompletion: { completion in
+        .sink(receiveCompletion: { [weak self] completion in
             switch completion {
             case .finished:
                 print("Banka account request finished.")
             case .failure(let error):
-                self.errorMessage = error.localizedDescription
-                print("Error: \(error)")
+                self?.state = .error(error.localizedDescription)
             }
         }, receiveValue: { bankAccountResponse in
             print("Login URL: \(bankAccountResponse.loginUrl)")
             // IF we need login open this in web page
         }).store(in: &cancellables)
     }
-    
-    func loadAccounts() {
-        loadToken()
-            .flatMap({ tokenResponse -> AnyPublisher<AccountsResponse, Error> in
-                self.token = tokenResponse.accessToken
-                return self.networkManager.getAccounts(token: tokenResponse.accessToken)
-            })
-            .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { completion in
-                switch completion {
-                case .finished:
-                    print("Account Loading finished.")
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    print("Error: \(error)")
-                }
-            },  receiveValue: { accountsResponse in
-                self.accounts = accountsResponse.accounts.compactMap({
-                    AccountViewModel(token: self.token, resourceId: $0.resourceId, iban: $0.iban)
-                })
-                print("Accounts: \(accountsResponse.accounts)")
-            }).store(in: &cancellables)
-     }
-}
-
-struct AccountViewModel {
-    let token: String?
-    let resourceId: String
-    let iban: String
 }

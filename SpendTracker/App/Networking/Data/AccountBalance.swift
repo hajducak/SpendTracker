@@ -8,8 +8,8 @@ struct AccountInfo: Decodable {
 struct AccountBalance: Decodable {
     let balanceAmount: BalanceAmount
     let balanceType: String
-    let lastChangeDateTime: String
-    let referenceDate: String
+    let lastChangeDateTime: String?
+    let referenceDate: String?
 }
 
 struct BalanceAmount: Decodable {

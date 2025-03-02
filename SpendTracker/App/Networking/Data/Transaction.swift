@@ -11,8 +11,14 @@ struct Transaction: Decodable {
     let valueDate: String?
     let transactionAmount: TransactionAmount
     let creditorName: String?
+    let creditorAccount: IBAN?
     let debtorName: String?
+    let debtorAccount: IBAN?
     let remittanceInformationUnstructured: String?
+}
+
+struct IBAN: Decodable {
+    let iban: String?
 }
 
 struct TransactionAmount: Decodable {

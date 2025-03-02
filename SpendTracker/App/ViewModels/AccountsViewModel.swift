@@ -6,6 +6,7 @@ enum AccountsContentState {
     case error(String)
     case loading
     case content([AccountsContentData])
+    case showLogin(url: URL)
 }
 
 final class AccountsViewModel: ObservableObject {
@@ -26,26 +27,32 @@ final class AccountsViewModel: ObservableObject {
 
     private func loadAccounts() {
         loadToken()
-            .flatMap({ tokenResponse -> AnyPublisher<AccountsResponse, Error> in
+            .flatMap({ [weak self] tokenResponse -> AnyPublisher<AccountsResponse, Error> in
+                guard let self = self else {
+                    return Fail(error: NSError(domain: "Self deallocated", code: 0, userInfo: nil)).eraseToAnyPublisher()
+                }
                 self.token = tokenResponse.accessToken
                 return self.networkManager.getAccounts(token: tokenResponse.accessToken)
             })
             .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: {[weak self] completion in
+            .sink(receiveCompletion: { [weak self] completion in
                 if case .failure(let error) = completion {
-                    self?.state = .error(error.localizedDescription)
+                    self?.handleLoadAccountsError(error)
                 }
-            },  receiveValue: { accountsResponse in
-                let accounts = accountsResponse.accounts.compactMap({
+            }, receiveValue: { [weak self] accountsResponse in
+                let accounts = accountsResponse.accounts.compactMap {
                     AccountsContentData(resourceId: $0.resourceId, iban: $0.iban)
-                })
-                self.state = accounts.isEmpty ? .empty : .content(accounts)
+                }
+                self?.state = accounts.isEmpty ? .empty : .content(accounts)
             }).store(in: &cancellables)
     }
-    
+
     private func loadToken() -> AnyPublisher<TokenResponse, Error> {
         return networkManager.loadWallet()
-            .flatMap({ walletResponse -> AnyPublisher<TokenResponse, Error> in
+            .flatMap({ [weak self] walletResponse -> AnyPublisher<TokenResponse, Error> in
+                guard let self = self else {
+                    return Fail(error: NSError(domain: "Self deallocated", code: 0, userInfo: nil)).eraseToAnyPublisher()
+                }
                 return self.networkManager.loadToken(
                     walletId: walletResponse.walletId,
                     walletSecret: walletResponse.walletSecret
@@ -53,26 +60,41 @@ final class AccountsViewModel: ObservableObject {
             })
             .eraseToAnyPublisher()
     }
-    
-    // TODO: If login required
-    // Only if we do not have this (just once)
-    func addBankAccount(token: TokenResponse) {
+
+    private func handleLoadAccountsError(_ error: Error) {
+        guard let token = self.token else {
+            self.state = .error(error.localizedDescription)
+            return
+        }
+
+        // FIXME: should have possibility to choos from user wich accounts to add
+        addBankAccount(token: token)
+    }
+
+    private func addBankAccount(token: String) {
         let idpCode = "CSAS"
         networkManager.addBankAccount(
-            token: token.accessToken,
+            token: token,
             idpCode: idpCode
         )
         .receive(on: DispatchQueue.main)
         .sink(receiveCompletion: { [weak self] completion in
             switch completion {
             case .finished:
-                print("Banka account request finished.")
+                print("Bank account request finished.")
             case .failure(let error):
                 self?.state = .error(error.localizedDescription)
             }
-        }, receiveValue: { bankAccountResponse in
-            print("Login URL: \(bankAccountResponse.loginUrl)")
-            // IF we need login open this in web page
+        }, receiveValue: { [weak self] bankAccountResponse in
+            guard let url = URL(string: bankAccountResponse.loginUrl) else {
+                self?.state = .error("Invalid login URL")
+                return
+            }
+            self?.state = .showLogin(url: url)
         }).store(in: &cancellables)
+    }
+
+    func handleWebViewClosed() {
+        refreshData()
     }
 }

@@ -1,8 +1,11 @@
 import SwiftUI
+import WebKit
 
 struct AccountsView: View {
     @ObservedObject private var viewModel: AccountsViewModel
-    
+    @State private var showWebView = false
+    @State private var webViewURL: URL?
+
     init(viewModel: AccountsViewModel) {
         self.viewModel = viewModel
     }
@@ -18,6 +21,9 @@ struct AccountsView: View {
                             .font(.title)
                             .foregroundColor(.gray)
                             .padding()
+                        Button("Add Bank Account") {
+                            viewModel.refreshData()
+                        }
                         Spacer()
                     }
                 case .error(let error):
@@ -26,10 +32,8 @@ struct AccountsView: View {
                         Text("Error: \(error)")
                             .foregroundColor(.red)
                             .padding()
-                        Button {
+                        Button("Refresh data") {
                             viewModel.refreshData()
-                        } label: {
-                            Text("Refresh data")
                         }
                         Spacer()
                     }
@@ -57,9 +61,36 @@ struct AccountsView: View {
                             }
                         }
                     }
+                case .showLogin(let url):
+                    Color.clear
+                        .onAppear {
+                            webViewURL = url
+                            showWebView = true
+                        }
                 }
             }
             .navigationTitle("My Accounts")
+            .sheet(isPresented: $showWebView, onDismiss: {
+                viewModel.handleWebViewClosed()
+            }) {
+                if let url = webViewURL {
+                    WebView(url: url)
+                }
+            }
         }
     }
+}
+
+
+struct WebView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        let request = URLRequest(url: url)
+        webView.load(request)
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {}
 }

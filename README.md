@@ -25,6 +25,8 @@ A simple iOS application for displaying transparent bank accounts using the ČSA
    
 2. Use only the main branch.
 3. Open the project in Xcode.
+4. Open `/Certificates` folder and your P12 certificate here for API communication
+5. Open `CertificateManagement.swift` change static properties `fileName` & `password` acording new P12 certificate you put in previous step
 4. Run the application in the simulator.
 
 ## Autor

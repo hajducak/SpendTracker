@@ -1,18 +1,19 @@
 import Foundation
 import Combine
 
-class AccountViewModel: ObservableObject {
-    @Published var accounts: [Account]?
+class AccountsViewModel: ObservableObject {
+    @Published var accounts: [AccountViewModel]?
     @Published var errorMessage: String?
     
-    private let networkManager: NetworkManagerProtocol
+    let networkManager: NetworkManagerProtocol
     private var cancellables: Set<AnyCancellable> = []
+    private var token: String?
     
     init(networkManager: NetworkManagerProtocol) {
         self.networkManager = networkManager
         loadAccounts()
     }
-    
+
     func loadToken() -> AnyPublisher<TokenResponse, Error> {
         return networkManager.loadWallet()
             .flatMap({ walletResponse -> AnyPublisher<TokenResponse, Error> in
@@ -52,6 +53,7 @@ class AccountViewModel: ObservableObject {
     func loadAccounts() {
         loadToken()
             .flatMap({ tokenResponse -> AnyPublisher<AccountsResponse, Error> in
+                self.token = tokenResponse.accessToken
                 return self.networkManager.getAccounts(token: tokenResponse.accessToken)
             })
             .receive(on: DispatchQueue.main)
@@ -64,8 +66,16 @@ class AccountViewModel: ObservableObject {
                     print("Error: \(error)")
                 }
             },  receiveValue: { accountsResponse in
-                self.accounts = accountsResponse.accounts
+                self.accounts = accountsResponse.accounts.compactMap({
+                    AccountViewModel(token: self.token, resourceId: $0.resourceId, iban: $0.iban)
+                })
                 print("Accounts: \(accountsResponse.accounts)")
             }).store(in: &cancellables)
      }
+}
+
+struct AccountViewModel {
+    let token: String?
+    let resourceId: String
+    let iban: String
 }

@@ -6,6 +6,7 @@ protocol NetworkManagerProtocol {
     func loadToken(walletId: String, walletSecret: String) -> AnyPublisher<TokenResponse, Error>
     func addBankAccount(token: String, idpCode: String) -> AnyPublisher<LoginResponse, Error>
     func getAccounts(token: String) -> AnyPublisher<AccountsResponse, Error>
+    func getAccountDetails(token: String, resourceId: String) -> AnyPublisher<AccountResponse, Error>
 }
 
 class NetworkManagerImpl: NetworkManagerProtocol {
@@ -49,38 +50,38 @@ class NetworkManagerImpl: NetworkManagerProtocol {
     }
 
     func loadToken(walletId: String, walletSecret: String) -> AnyPublisher<TokenResponse, Error> {
-            // Načítame certifikát pre získanie tokenu
-            guard let identity = CertificateManagement.shared.loadP12Certificate(fileName: "sandbox", password: "Heslo1234") else {
-                return Fail(error: NSError(domain: "NetworkManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load certificate"])).eraseToAnyPublisher()
-            }
-            
-            let url = URL(string: "https://webapi.developers.erstegroup.com/api/egb/sandbox/v1/sandbox-idp/wallets/\(walletId)/tokens")!
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            // Telo požiadavky pre získanie tokenu
-            let body = [
-                "clientId": Self.clientId,
-                "clientSecret": Self.clientSecret,
-                "walletSecret": walletSecret
-            ]
-            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-            
-            let delegate = SSLSessionDelegate(identity: identity)
-            let sessionConfig = URLSessionConfiguration.default
-            let session = URLSession(configuration: sessionConfig, delegate: delegate, delegateQueue: nil)
-            
-            return session.dataTaskPublisher(for: request)
-                .tryMap { result -> Data in
-                    guard let response = result.response as? HTTPURLResponse, response.statusCode == 200 else {
-                        throw NSError(domain: "NetworkManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
-                    }
-                    return result.data
-                }
-                .decode(type: TokenResponse.self, decoder: JSONDecoder())
-                .eraseToAnyPublisher()
+        // Načítame certifikát pre získanie tokenu
+        guard let identity = CertificateManagement.shared.loadP12Certificate(fileName: "sandbox", password: "Heslo1234") else {
+            return Fail(error: NSError(domain: "NetworkManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load certificate"])).eraseToAnyPublisher()
         }
+        
+        let url = URL(string: "https://webapi.developers.erstegroup.com/api/egb/sandbox/v1/sandbox-idp/wallets/\(walletId)/tokens")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Telo požiadavky pre získanie tokenu
+        let body = [
+            "clientId": Self.clientId,
+            "clientSecret": Self.clientSecret,
+            "walletSecret": walletSecret
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        let delegate = SSLSessionDelegate(identity: identity)
+        let sessionConfig = URLSessionConfiguration.default
+        let session = URLSession(configuration: sessionConfig, delegate: delegate, delegateQueue: nil)
+        
+        return session.dataTaskPublisher(for: request)
+            .tryMap { result -> Data in
+                guard let response = result.response as? HTTPURLResponse, response.statusCode == 200 else {
+                    throw NSError(domain: "NetworkManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+                }
+                return result.data
+            }
+            .decode(type: TokenResponse.self, decoder: JSONDecoder())
+            .eraseToAnyPublisher()
+    }
     
     func addBankAccount(token: String, idpCode: String) -> AnyPublisher<LoginResponse, Error> {
         let url = URL(string: "https://webapi.developers.erstegroup.com/api/egb/sandbox/v1/wallet/v1/banks")!
@@ -132,6 +133,34 @@ class NetworkManagerImpl: NetworkManagerProtocol {
                 return result.data
             }
             .decode(type: AccountsResponse.self, decoder: JSONDecoder())
+            .eraseToAnyPublisher()
+    }
+
+    func getAccountDetails(token: String, resourceId: String) -> AnyPublisher<AccountResponse, Error> {
+        guard let identity = CertificateManagement.shared.loadP12Certificate(fileName: "sandbox", password: "Heslo1234") else {
+            return Fail(error: NSError(domain: "NetworkManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load certificate"])).eraseToAnyPublisher()
+        }
+
+        let url = URL(string: "https://webapi.developers.erstegroup.com/api/egb/sandbox/v1/aisp/v1/accounts/\(resourceId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(Self.apiKey, forHTTPHeaderField: "web-api-key")
+
+        // Setup SSL session
+        let delegate = SSLSessionDelegate(identity: identity)
+        let sessionConfig = URLSessionConfiguration.default
+        let session = URLSession(configuration: sessionConfig, delegate: delegate, delegateQueue: nil)
+        
+        return session.dataTaskPublisher(for: request)
+            .tryMap { result -> Data in
+                guard let response = result.response as? HTTPURLResponse, response.statusCode == 200 else {
+                    throw NSError(domain: "NetworkManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+                }
+                return result.data
+            }
+            .decode(type: AccountResponse.self, decoder: JSONDecoder())
             .eraseToAnyPublisher()
     }
 }

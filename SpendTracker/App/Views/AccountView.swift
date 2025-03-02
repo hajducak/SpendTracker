@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct AccountView: View {
-    @ObservedObject private var viewModel: AccountViewModel
+    @ObservedObject private var viewModel: AccountsViewModel
     
-    init(viewModel: AccountViewModel) {
+    init(viewModel: AccountsViewModel) {
         self.viewModel = viewModel
     }
     
@@ -12,7 +12,16 @@ struct AccountView: View {
             VStack {
                 if let accounts = viewModel.accounts {
                     List(accounts, id: \.resourceId) { account in
-                        Text(account.iban)
+                        NavigationLink(
+                            destination: AccountDetailView(
+                                viewModel: AccountDetailViewModel(
+                                    networkManager: viewModel.networkManager,
+                                    accountViewModel: account
+                                )
+                            )
+                        ) {
+                            Text(account.iban)
+                        }
                     }
                 } else if let errorMessage = viewModel.errorMessage {
                     Text("Error: \(errorMessage)")

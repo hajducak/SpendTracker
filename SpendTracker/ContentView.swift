@@ -1,15 +1,15 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var accountViewModel: AccountViewModel
+    @StateObject private var accountsViewModel: AccountsViewModel
     
-    init(accountViewModel: AccountViewModel) {
-        _accountViewModel = StateObject(wrappedValue: accountViewModel)
+    init(accountsViewModel: AccountsViewModel) {
+        _accountsViewModel = StateObject(wrappedValue: accountsViewModel)
     }
     
     var body: some View {
         TabView {
-            AccountView(viewModel: accountViewModel)
+            AccountView(viewModel: accountsViewModel)
                 .tabItem {
                     Label("Account", systemImage: "person.circle.fill")
                 }

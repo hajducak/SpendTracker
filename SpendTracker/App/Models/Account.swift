@@ -3,8 +3,14 @@ import Foundation
 struct Account: Codable {
     let resourceId: String
     let iban: String
-    let _links: AccountLinks
-    let _ext: AccountExt
+    let links: AccountLinks
+    let ext: AccountExt
+
+    enum CodingKeys: String, CodingKey {
+        case resourceId, iban
+        case links = "_links"
+        case ext = "_ext"
+    }
 }
 
 struct AccountLinks: Codable {
@@ -19,8 +25,4 @@ struct Link: Codable {
 
 struct AccountExt: Codable {
     let identityProviderCode: String
-}
-
-struct AccountsResponse: Codable {
-    let accounts: [Account]
 }

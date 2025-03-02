@@ -3,6 +3,10 @@ import Combine
 
 class AccountDetailViewModel: ObservableObject {
     @Published var accountDetail: AccountDetail?
+    @Published var balances: [AccountBalance] = []
+    @Published var transactions: [Transaction] = []
+    
+    @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     
     private var cancellables: Set<AnyCancellable> = []
@@ -21,18 +25,29 @@ class AccountDetailViewModel: ObservableObject {
             // Get token or what ?
             return
         }
-        networkManager.getAccountDetails(token: token, resourceId: accountViewModel.resourceId)
+        loadAccountDetails(token: token, resourceId: accountViewModel.resourceId)
+    }
+    
+    func loadAccountDetails(token: String, resourceId: String) {
+        isLoading = true
+        errorMessage = nil
+        let accountInfoPublisher = networkManager.getAccountDetails(token: token, resourceId: accountViewModel.resourceId)
+        let balancesPublisher = networkManager.getAccountBalances(token: token, resourceId: resourceId)
+        let transactionsPublisher = networkManager.getAccountTransactions(token: token, resourceId: resourceId)
+
+        Publishers.Zip3(accountInfoPublisher, balancesPublisher, transactionsPublisher)
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { completion in
-                switch completion {
-                case .finished:
-                    print("Account detail loaded.")
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    print("Error: \(error)")
+                self.isLoading = false
+                if case .failure(let error) = completion {
+                    self.errorMessage = "Chyba: \(error.localizedDescription)"
                 }
-            }, receiveValue: { accountResponse in
+            }, receiveValue: { accountResponse, balancesResponse, transactionsResponse in
                 self.accountDetail = accountResponse.account
-            }).store(in: &cancellables)
+                self.balances = balancesResponse.balances
+                self.transactions = (transactionsResponse.transactions.booked) ?? [] +
+                (transactionsResponse.transactions.pending ?? [])
+            })
+            .store(in: &cancellables)
     }
 }

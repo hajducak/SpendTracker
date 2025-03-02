@@ -11,7 +11,11 @@ A simple iOS application for displaying transparent bank accounts using the ČSA
 - SwiftUI  
 - Combine  
 - URLSession  
-- MVVM  
+- MVVM
+
+## Features
+- **Bank accounts** showing all my accounts in the list
+- **Bank account detail** showing all informations about account: info, balances, transactions
 
 ## Installation  
 1. Clone the repository:  

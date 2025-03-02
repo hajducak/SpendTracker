@@ -13,7 +13,7 @@ protocol NetworkManagerProtocol {
 
 class NetworkManagerImpl: NetworkManagerProtocol {
     private func createSession() -> URLSession? {
-        guard let identity = CertificateManagement.shared.loadP12Certificate(fileName: "sandbox", password: "Heslo1234") else {
+        guard let identity = CertificateManagement.shared.loadP12Certificate() else {
             return nil
         }
         let delegate = SSLSessionDelegate(identity: identity)

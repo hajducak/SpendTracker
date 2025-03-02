@@ -2,20 +2,22 @@ import Foundation
 import Security
 
 class CertificateManagement {
+    private static let fileName = "sandbox"
+    private static let password = "Heslo1234"
     
     static let shared = CertificateManagement()
     
     private init() {}
 
-    func loadP12Certificate(fileName: String, password: String) -> SecIdentity? {
-        guard let p12Path = Bundle.main.path(forResource: fileName, ofType: "p12"),
+    func loadP12Certificate() -> SecIdentity? {
+        guard let p12Path = Bundle.main.path(forResource: Self.fileName, ofType: "p12"),
               let p12Data = try? Data(contentsOf: URL(fileURLWithPath: p12Path)) else {
             print("Unable to find or read the p12 file.")
             return nil
         }
         
         let options: [NSString: Any] = [
-            kSecImportExportPassphrase: password
+            kSecImportExportPassphrase: Self.password
         ]
         
         var items: CFArray?
